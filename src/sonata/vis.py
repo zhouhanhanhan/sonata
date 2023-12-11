@@ -134,68 +134,6 @@ def plt_domain_by_labels(data_mat: np.ndarray, label: np.ndarray, color: str = '
         plt.savefig(save_url, bbox_inches="tight")
     plt.close()
 
-
-def plt_mapping_by_label(X_new: np.ndarray, y_new: np.ndarray, label1: np.ndarray, label2: np.ndarray, save_url: str = '', a1: float = 0.3, a2: float = 0.8, show: bool = False) -> None:
-    """
-    Scatter plot of data points from two domains aligned by SCOT, colored by labels.
-
-    Parameters
-    ----------
-    X_new : np.ndarray
-        Data points from the first domain.
-    y_new : np.ndarray
-        Data points from the second domain.
-    label1 : np.ndarray
-        Labels associated with data points from the first domain.
-    label2 : np.ndarray
-        Labels associated with data points from the second domain.
-    save_url : str, optional
-        The path to save the plot as an image file, by default ''.
-    a1 : float, optional
-        The alpha value for marker transparency in the first domain, by default 0.3.
-    a2 : float, optional
-        The alpha value for marker transparency in the second domain, by default 0.8.
-    show : bool, optional
-        Whether to display the plot, by default False.
-
-    Returns
-    -------
-    None
-    """
-    data_mat = np.concatenate((X_new, y_new), axis=0)
-    pca = PCA(n_components=2).fit(data_mat)
-    data_embed = pca.fit_transform(data_mat)
-    X_proj=data_embed[0: X_new.shape[0],]
-    y_proj=data_embed[X_new.shape[0]:,]
-
-    markers = ['.', '*', '+', '1', '|']
-    all_label = np.unique(np.concatenate((label1, label2), axis = 0))
-
-    fig = plt.figure(figsize=(3, 3))
-    for i in range(len(all_label)):
-        mark = markers[i]
-        label = all_label[i]
-        plt.scatter(y_proj[:,0][np.where(label2 ==label)], y_proj[:,1][np.where(label2 ==label)], 
-                    c = "#FF8C00", marker = mark, s=150, alpha = a2, label="domain2")
-    for i in range(len(all_label)):
-        mark = markers[i]
-        label = all_label[i]    
-        plt.scatter(X_proj[:,0][np.where(label1 ==label)], X_proj[:,1][np.where(label1 ==label)], 
-                    c = "#009ACD", marker = mark, s=100, alpha= a1, label="domain1")
-        
-    plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left", prop={'size': 10})
-    plt.xlabel("Principal component 1", fontsize=10)
-    plt.ylabel("Principal component 2", fontsize=10)
-    plt.tick_params(axis='x', labelsize=8)
-    plt.tick_params(axis='y', labelsize=8)
-    plt.title("Domains Aligned by SCOT", fontdict={'fontsize': 15})
-    if show:
-        plt.show()
-    else:
-        os.makedirs(os.path.dirname(save_url), exist_ok=True)
-        plt.savefig(save_url, bbox_inches="tight")
-    plt.close()
-
 def plt_mapping_by_labels(
     X_new: np.ndarray,
     y_new: np.ndarray,
