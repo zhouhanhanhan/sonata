@@ -1,0 +1,19 @@
+
+sonata.pipline.SONATA_processor(data_path1:str, data_path2:str, label_path1:str=None, label_path2:str=None, dm1_name:str=None, dm2_name:str=None) -> None
+sonata.pipline.SONATA_processor.load_data() -> None
+sonata.pipline.SONATA_processor.vis_plt_domain_by_labels(color1:str="#009ACD", color2:str="#FF8C00", a1:float=0.8, a2:float=0.8, stick_label_name:str=None) -> None
+sonata.pipline.SONATA_processor.scot_mapping(k:int,  e:float,  mode:str="connectivity",  metric:str="correlation",  norm:str=None, norm_data:str='',  n_pca:int=None, proj_data:str='', XontoY:bool=False,  stick_label_name:str=None, a:float=0.8, c1: str = "#FF8C00", c2: str = "#009ACD", gc1: str = "Blues", gc2: str = "Oranges") -> None
+sonata.pipline.sonata_mapping(sigma:float,  kmin:int=10,  t:float=0.1, kmax:int=200,  kmode:str="distance",  kmetric:str="euclidean",  percnt_thres:int=95,  eval_knn:bool=True, sonata_dm:str="data1", XontoY:bool=False,  cl_alpha: float = 0.1,  curve_style : bool = False, stick_label_name:str=None, a: float = 0.8, c1: str = "#FF8C00", c2: str = "#009ACD", gc1: str = "Blues", gc2: str = "Oranges", max_return: int=4, vs_link: bool=True, vs_group: bool=True, norm:str=None, norm_data:str='',  n_pca:int=None, proj_data:str='') -> None
+sonata.sonata.sonata(kmin=10, sigma=0.1, t=0.1, kmax=200, kmode="distance", kmetric="euclidean", percnt_thres=95, eval_knn=False) -> None
+sonata.sonata.sonata.alt_mapping(self, data:np.ndarray) -> typing.Generator[np.ndarray, None, None]
+sonata.scotv1.SCOT(domain1: np.ndarray, domain2: np.ndarray) -> None
+sonata.scotv1.SCOT.align(self, k: int, e: float, mode: str = "connectivity", metric: str = "correlation", verbose: bool = True, normalize: bool = False, norm: str = "l2", XontoY: bool = True, selfTune: bool=False, init_marginals: bool = True) -> Tuple[np.ndarray, np.ndarray]
+sonata.util.projection_barycentric(x: np.ndarray, y: np.ndarray, coupling: np.ndarray, XontoY: bool = True) -> tuple
+sonata.util.load_data(matrix_file: str) -> np.ndarray
+sonata.vis.plt_domain_by_labels(data_mat: np.ndarray, label: np.ndarray, color: str = '#009ACD', title: str = None, y_tick_labels: list = None, save_url: str = '', a: float = 0.8, show: bool = True) -> None
+sonata.vis.plt_mapping_by_labels(X_new: np.ndarray, y_new: np.ndarray, label1: np.ndarray, label2: np.ndarray, title1: str = "Domain 1", title2: str = "Domain 2", y_tick_labels: list = None, a: float = 0.8, c1: str = "#FF8C00", c2: str = "#009ACD", gc1: str = "Blues", gc2: str = "Oranges", save_url: str = None, XontoY: bool = True, show: bool = True,
+) -> None
+sonata.vis.plt_cannotlink_by_labels(data_mat: np.ndarray,  labels: np.ndarray, ambiguous_nodes: np.ndarray,  ambiguous_links: list,  y_tick_labels: str = None,  save_url: str = None,  cl_alpha: float = 0.1,  curve_style : bool = False, show=True
+) -> None
+sonata.vis.plt_ambiguous_groups_by_labels(data_mat: np.ndarray, ambiguous_nodes: np.ndarray, ambiguous_labels: np.ndarray, save_url: str = '', alpha: float = 0.8, show: bool = True,
+) -> None
