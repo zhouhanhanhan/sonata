@@ -1,0 +1,7 @@
+active-semi-supervised-clustering
+easydict
+matplotlib
+numpy
+POT
+scikit-learn
+scipy
