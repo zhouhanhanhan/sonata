@@ -38,8 +38,8 @@ print("label1 shape={}\tlabel2 shape={}".format(label1.shape, label2.shape))
 
 # In[3]:
 
-# sonata.vis.plt_domain_by_labels(data1, label1, color="#009ACD", title=dm1_name, y_tick_labels=cell_labels)
-# sonata.vis.plt_domain_by_labels(data2, label2, color="#FF8C00", title=dm2_name, y_tick_labels=cell_labels)
+sonata.vis.plt_domain_by_labels(data1, label1, color="#009ACD", title=dm1_name, y_tick_labels=cell_labels)
+sonata.vis.plt_domain_by_labels(data2, label2, color="#FF8C00", title=dm2_name, y_tick_labels=cell_labels)
 
 # sonata.vis.plt_domain_by_labels(data1, label1)
 # sonata.vis.plt_domain_by_labels(data2, label2)

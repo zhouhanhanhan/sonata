@@ -8,22 +8,10 @@ np.seterr(under='ignore')
 import warnings
 warnings.filterwarnings("ignore")
 import matplotlib
-# matplotlib.use('Agg')
+matplotlib.use('Agg')
 
 def datasets(dataset):
     data_params = {
-        # "SNARE-seq": {"data_url1": "scatac_feat.npy", "data_url2": "scrna_feat.npy", 
-        #               "label_url1": "SNAREseq_atac_types.txt", "label_url2": "SNAREseq_rna_types.txt", 
-        #               "dm1_name": "Chromatin Accessibility","dm2_name":"Gene Expression",
-        #               "cell_labels": ["H1", "GM", "BJ", "K562"],
-        #               "scot_k": 110, "scot_e": 0.001, "scot_pca": 10, 
-        #               "sigma": 0.15, "sonata_pca": 2},
-        # "scGEM": {"data_url1": "scGEM_expression.csv", "data_url2": "scGEM_methylation.csv", 
-        #           "label_url1": "scGEM_typeExpression.txt", "label_url2": "scGEM_typeMethylation.txt", 
-        #           "dm1_name":'Gene Expression',"dm2_name":'DNA methylation',
-        #           "cell_labels":["BJ", "d8", "d16T+", "d24T+", "iPS"],
-        #           "scot_k": 110, "scot_e": 0.001, "scot_pca": 10,
-        #           "sigma": 0.15},
         "t_branch": {"data_url1": "../data/t_branch/domain1.txt", "data_url2": "../data/t_branch/domain2.txt", 
                   "label_url1": "../data/t_branch/label_domain1.txt", "label_url2": "../data/t_branch/label_domain2.txt", 
                   "scot_k": 10, "scot_e": 0.001, "smetric": "euclidean",

@@ -23,7 +23,7 @@ class sonata(object):
     Input for SONATA: data in form of numpy arrays/matrices, where the rows correspond to samples and columns correspond to features.
     Basic Use:
     import sonata
-    sn = sonata.sonata(kmin=10, sigma=0.1, t=0.1)
+    sn = sonata.sonata.sonata(kmin=10, sigma=0.1, t=0.1)
     alter_mappings = sn.alter_mapping(data)
 
     Required parameters
