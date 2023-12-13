@@ -23,7 +23,7 @@ if __name__=='__main__':
     data1 = sonata.util.wrapped_normalize(data1)
 
     ## sonata pipline
-    sn_instance = sonata.sonata.sonata(sigma=sigma)
+    sn_instance = sonata.model.sonata(sigma=sigma)
     ambiguous_groups = sn_instance.check_ambiguity(data1)
     sonata_mapping_result = sn_instance.mapping_mat(data1, ambiguous_groups)
 

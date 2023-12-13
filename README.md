@@ -35,7 +35,8 @@ Example for basic use under folder *examples*:
 
 
 ## How to use
-### Basic use
+### 1. Basic use
+#### 1.1. load & preprocess data
 ```python
 import sonata
 # load data
@@ -43,7 +44,7 @@ data = sonata.util.load_data(data_url)
 # data preprocess (if necessary)
 data = sonata.util.wrapped_normalize(data, norm='l2')
 ```
-#### SONATA
+#### 1.2. Run SONATA
 - Input: *data* numpy arrays, where each row represents a sample and each column represents a feature.  
 - Output: *ambiguous_groups* dictionary containing the groups of ambiguous cells identified in the input data. 
 
@@ -63,7 +64,7 @@ ambiguous_groups = sn_instance.check_ambiguity(data)
 - **percnt_thres**: The percentile of the data distribution used in the calculation of the “virtual” cell. Default=95.
 - **eval_knn**: Evaluate whether the alternative alignment distorts the data manifold by changing the mutual nearest neighbors of cells. Default=True.
 
-### Using SONATA to generate self-ambiguity mappings
+### 2. Using SONATA to generate self-ambiguity mappings
 - Input: 
   - *data*: cell by feature numpy array matrix.
   - *ambiguous_groups*: identified by SONATA
@@ -73,8 +74,8 @@ ambiguous_groups = sn_instance.check_ambiguity(data)
 sonata_mappings = sn_instance.mapping_mat(data, ambiguous_groups)
 ```
 
-### Using SONATA to generate alternaltive solutions for manifold aligners
-Run a manifold aligner
+### 3. Using SONATA to generate alternaltive solutions for manifold aligners
+#### 3.1 Run a manifold aligner
 ```python
 # load data
 data1 = sonata.util.load_data(data_url1)
@@ -87,7 +88,7 @@ scot_instance.align(k=10, e=1e-3)
 # the cell by cell mapping matrix of SCOT:
 scot_instance.coupling
 ```
-Generate alternaltive solutions
+#### 3.2 Generate alternaltive solutions
 ```python
 # generate alternaltive mappings
 manifold_alternaltive_mappings = sn_instance.smap2amap(sonata_mappings, scot_instance.coupling)

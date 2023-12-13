@@ -26,7 +26,7 @@ class sonata(object):
     Basic Use:
     import sonata
     data1 = sonata.util.load_data(data_url)
-    sn_instance = sonata.sonata.sonata(sigma)
+    sn_instance = sonata.model.sonata(sigma)
     ambiguous_groups = sn_instance.check_ambiguity(data1)
 
     Generate self-ambiguity mappings:
