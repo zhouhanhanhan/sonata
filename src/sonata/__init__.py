@@ -6,6 +6,6 @@ except DistributionNotFound:
     pass
 
 from . import scotv1
-from . import sonata
-from . import util, vis, pipline
+from . import model
+from . import util, vis
 

@@ -1,6 +1,8 @@
 import numpy as np
 import scipy.sparse as sp 
 import sklearn 
+from sklearn.decomposition import PCA
+
 from functools import wraps
 
 # wrap two methods to avoid importing extra methods
@@ -11,8 +13,9 @@ def preserve_docstring(original_func):
         result = original_func(*args, **kwargs)
         return result
     return wrapper
+
 #wrapped_normalize = preserve_docstring(sklearn.preprocessing.normalize)
-def wrapped_normalize(X: np.ndarray, norm: str, axis: int = 1) -> np.ndarray:
+def wrapped_normalize(X: np.ndarray, norm: str='l2', axis: int = 1) -> np.ndarray:
     """
     Normalize samples individually to unit norm.
 
@@ -20,10 +23,10 @@ def wrapped_normalize(X: np.ndarray, norm: str, axis: int = 1) -> np.ndarray:
     ----------
     X : np.ndarray
         The data array to be normalized.
-    norm : str
+    norm : str, optional
         The norm to use to normalize each non zero sample 
-        (or each non-zero feature if axis is 0).
-    axis : int
+        (or each non-zero feature if axis is 0), options are 'l1', 'l2' and 'max', by default 'l2'.
+    axis : int, optional
         Axis used to normalize the data along. If 1, independently normalize each sample, 
         otherwise (if 0) normalize each feature, by default 1.
 
@@ -34,46 +37,29 @@ def wrapped_normalize(X: np.ndarray, norm: str, axis: int = 1) -> np.ndarray:
     """
     return sklearn.preprocessing.normalize(X, norm, axis=axis)
 
-from sklearn.decomposition import PCA as OriginalPCA
-class Wrapped_PCA(OriginalPCA):
-    __doc__ = OriginalPCA.__doc__
-    def __init__(self, n_components: int):
-        """Initialize the Wrapped PCA class."""
-        super().__init__(n_components=n_components)
-    def fit(self, X:np.ndarray, y:np.ndarray=None):
-        """
-        Fit the PCA model with the given data.
+def wrapped_pca(X: np.ndarray, n_components: int) -> np.ndarray:
+    """
+    Perform Principal Component Analysis (PCA) on the input data.
 
-        Parameters
-        ----------
-        X : ndarray
-            Input data.
-        y : ndarray, optional
-            Target data. Default is None.
+    Parameters
+    ----------
+    X : np.ndarray
+        The input data to be transformed.
+    
+    n_components : int
+        The number of components to keep. This determines the dimensionality of
+        the transformed data.
 
-        Returns
-        -------
-        self : object
-            Fitted PCA model.
-        """
-        return super().fit(X, y)
-    def fit_transform(self, X:np.ndarray, y:np.ndarray=None):
-        """
-        Fit the PCA model with the given data and apply dimensionality reduction.
+    Returns
+    -------
+    np.ndarray
+        The transformed data, where each row represents a sample and each column
+        represents a principal component.
 
-        Parameters
-        ----------
-        X : ndarray
-            Input data.
-        y : ndarray, optional
-            Target data. Default is None.
-
-        Returns
-        -------
-        X_new : ndarray
-            Transformed data.
-        """
-        return super().fit_transform(X, y)
+    """
+    pca_instance = PCA(n_components=n_components).fit(X)
+    X_pca = pca_instance.fit_transform(X)
+    return X_pca
 
 def load_data(matrix_file: str) -> np.ndarray:
     """
@@ -148,29 +134,3 @@ def projection_barycentric(x: np.ndarray, y: np.ndarray, coupling: np.ndarray, X
         y_aligned=np.matmul(np.transpose(coupling), x) / weights[:, None]
 
     return X_aligned, y_aligned
-
-def subsampling(data: np.ndarray, sample_size: int) -> np.ndarray:
-    """
-    Subsample data to a specified sample size.
-
-    Parameters
-    ----------
-    data : numpy.ndarray
-        The input data to be subsampled.
-    sample_size : int
-        The desired sample size.
-
-    Returns
-    -------
-    numpy.ndarray
-        The subsampled data.
-
-    Notes
-    -----
-    This function subsamples the input data to the specified sample size.
-    It uses linear spacing to select indices for subsampling and returns the subsampled data.
-
-    """
-    linspace = np.linspace(0, data.shape[0] - 1, sample_size, dtype= int)
-    data_new = data[linspace]
-    return data_new

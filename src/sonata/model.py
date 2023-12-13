@@ -20,23 +20,36 @@ class sonata(object):
     SONATA algorithm for disambiguating manifold alignment of single-cell data
     https://www.biorxiv.org/content/10.1101/2023.10.05.561049v2
 
-    Input for SONATA: data in form of numpy arrays/matrices, where the rows correspond to samples and columns correspond to features.
+    Input for SONATA: an numpy array, where each row represents a sample and each column represents a feature. 
+    Output: a dictionary containing the groups of ambiguous cells identified in the input data. 
+
     Basic Use:
     import sonata
-    sn = sonata.sonata.sonata(kmin=10, sigma=0.1, t=0.1)
-    alter_mappings = sn.alter_mapping(data)
+    data1 = sonata.util.load_data(data_url)
+    sn_instance = sonata.sonata.sonata(sigma)
+    ambiguous_groups = sn_instance.check_ambiguity(data1)
+
+    Generate self-ambiguity mappings:
+    sonata_mappings = sn_instance.mapping_mat(data, ambiguous_groups)
+
+    Generate alternaltive solutions for manifold aligners (SCOT as an example)
+    # manifold aligner
+    scot_instance = sonata.scotv1.SCOT(data1, data2)
+    scot_instance.align(k=10, e=1e-3)
+    # generate alternaltive mappings
+    manifold_alternaltive_mappings = sn_instance.smap2amap(sonata_mappings, scot_instance.coupling)
 
     Required parameters
-    - k: Number of neighbors to be used when constructing kNN graphs. Default=10. The number of neighbors k should be suffciently large to connect the corresponding k-NN graph   
+    - kmin: Number of neighbors to be used when constructing kNN graphs. Default=10. The number of neighbors k should be suffciently large to connect the corresponding k-NN graph   
     - sigma: Bandwidth parameter for cell-wise ambiguity (Aij). Default=0.1.
     - t: A threshold to ascertain the ambiguity status of individual cells before clustering them into groups. Default=0.1, with lower values resulting in stricter ambiguity classification.
 
     Optional parameters:
-    - kmode: Determine whether to use a connectivity graph (adjacency matrix of 1s/0s based on whether nodes are connected) or a distance graph (adjacency matrix entries weighted by distances between nodes). Default="distance"
+    - kmode: Determine whether to use a connectivity graph (adjacency matrix of 1s/0s based on whether cells are connected) or a distance graph (adjacency matrix entries weighted by distances between cells). Default="distance"
     - kmetric: Sets the metric to use while constructing nearest neighbor graphs. some possible choices are "euclidean", "correlation". Default= "euclidean".
     - kmax: Maximum value of knn when constructing geodesic distance matrix. Default=200.
     - percnt_thres: The percentile of the data distribution used in the calculation of the “virtual” cell. Default=95.
-    - eval_knn: Evaluate whether the alternative alignment distorts the data manifold by changing the mutual nearest neighbors of cells. Default=False.    
+    - eval_knn: Evaluate whether the alternative alignment distorts the data manifold by changing the mutual nearest neighbors of cells. Default=True.    
     """
 
     def __init__(self, kmin=10, sigma=0.1, t=0.1, kmax=200, kmode="distance", kmetric="euclidean", percnt_thres=95, eval_knn=False) -> None:
@@ -57,7 +70,7 @@ class sonata(object):
             The maximum number of neighbors to connect in the k-NN graph, by default 200.
         kmode : str, optional
             Mode to use for calculating the k-NN graph, either 'connectivity' or 'distance', 
-            adjacency matrix of a connectivity graph is based on whether nodes are connected and a distance graph is based on wighted distances between nodes, by default "distance".
+            adjacency matrix of a connectivity graph is based on whether cells are connected and a distance graph is based on wighted distances between cells, by default "distance".
         kmetric : str, optional
             Metric to use for calculating the k-NN graph, possible choices are 'euclidean' and 'correlation', by default "euclidean".
         percnt_thres : int, optional
@@ -87,40 +100,114 @@ class sonata(object):
 
         # for plt
         self.ambiguous_links = None
-        self.ambiguous_nodes = None
-        self.cluster_labels = None
+        self.ambiguous_cells = None
 
         # for elbow methods
         self.K = None
         self.K_yerror = None
         self.K_xstep = None
 
-    def alt_mapping(self, data:np.ndarray) -> typing.Generator[np.ndarray, None, None]:
+    def check_ambiguity(self, data:np.ndarray) -> dict:
         """
-        Pipline to perform alternative mappings.
+        Pipline to check whether ambiguity exists in input data.
 
         Parameters
         ----------
         data : np.ndarray
-            Input data for which the alternaltive mappings should be performed.
+            Input data for which the self-ambiguity should be checked.
 
         Returns
         -------
-        group_amats : Generator
-            The generator of the alternaltive mapping matrices.
+        ambiguous_cell_groups : dict
+            A dictionary containing the groups of ambiguous cells identified in the input data.
+            Each key represents a group, and the corresponding value is an array of cells belonging to that group.
         """
+        print("======================Running SONATA======================")
+        # construct cell representation
+        geo_mat = self.construct_graph(data)
+
         # cell-wise ambiguity
-        self.construct_graph(data)
-        self.l1_mat = self.geo_similarity(geo_dist=self.geo_mat)
-        self.cell_ambiguity()
+        cell_amat = self.cell_ambiguity(geo_mat)
 
         # group-wise ambiguity
-        self.group_amats = self.group_ambiguity(data)
+        ambiguous_cell_groups = self.group_ambiguity(data, cell_amat)
 
-        return self.group_amats
-    
-    
-    def construct_graph(self, data:np.ndarray) -> None:
+        return ambiguous_cell_groups
+
+    def mapping_mat(self, data: np.ndarray, ambiguous_cell_groups: dict) -> typing.Generator[np.ndarray, None, None]:
+        """
+        Generate self-alternative mappings.
+
+        Parameters
+        ----------
+        data : np.ndarray
+            Input data for which the self-ambiguity should be checked.
+        ambiguous_cell_groups : dict
+            A dictionary of ambiguous groups, where key is the group label and 
+            value is an array containing indices of cells in the ambiguous group.
+
+        Yields
+        ------
+        Generator : typing.Generator[np.ndarray, None, None]
+            The generator of the self-alternaltive np.ndarray mapping matrices.
+
+        Notes
+        -----
+        This function generates self-alternaltive mappings by aligning ambiguous cells using optimal transport.
+        It returns a generator generating the matrices of self-alternaltive mappings.
+
+        """
+        print('===> generating self-alternative mappings ...')
+        np.seterr(under='ignore')
+        ambiguous_cell_groups_list = list(ambiguous_cell_groups.values())
+        ambiguous_cells = np.concatenate(ambiguous_cell_groups_list)
+        unambiguous_cells = np.setdiff1d(list(range(data.shape[0])), ambiguous_cells)
+        assert data.shape[0] == len(ambiguous_cells)+len(unambiguous_cells)        
+
+        ### evaluate valid group
+        if self.eval_knn:
+            valid_perm = self.eval_valid_group_knn(ambiguous_cell_groups_list, unambiguous_cells)
+        else:
+            valid_perm= list(itertools.permutations(range(len(ambiguous_cell_groups_list))))[1:]
+        print("There are {} vaild perms.".format(len(valid_perm)))
+
+        assert len(ambiguous_cell_groups_list) > 1
+        for perms in valid_perm:
+            # keep the diagonal for original cells
+            map_mat = np.zeros((data.shape[0], data.shape[0]))
+
+            # keep the diagonal for unambiguous cells
+            for cell in unambiguous_cells: map_mat[cell, cell] = 1.0        
+
+            for i in range(len(ambiguous_cell_groups_list)):
+                group_idx1 = i
+                group_idx2 = perms[i]
+
+                cell_group1 = ambiguous_cell_groups_list[group_idx1]
+                cell_group2 = ambiguous_cell_groups_list[group_idx2]
+
+                if group_idx1 == group_idx2:
+                    # keep the diagonal for unchanged cells
+                    for cell in np.concatenate((cell_group1, cell_group2)): map_mat[cell, cell] = 1.0 
+                else:
+                    # aligning ambiguous group pairs
+                    cost = 1-self.cell_amat
+                    cost = cost[cell_group1, :][:, cell_group2]
+                    p1 = ot.unif(len(cell_group1))
+                    p2 = ot.unif(len(cell_group2))
+                    T = ot.emd(p1, p2, cost)
+                    T = normalize(T, norm='l1', axis=1, copy=False)
+
+                    # fill in the T matrix for mapped cells 
+                    for group1_idx in range(len(cell_group1)):
+                        group1_cell = cell_group1[group1_idx]
+                        for group2_idx in range(len(cell_group2)):
+                            group2_cell = cell_group2[group2_idx]
+                            map_mat[group1_cell, group2_cell] = T[group1_idx, group2_idx]
+
+            yield map_mat
+
+    def construct_graph(self, data:np.ndarray) -> np.ndarray:
         """
         Constructing k-NN graph and calculating geodesic distance.
 
@@ -131,7 +218,8 @@ class sonata(object):
 
         Returns
         -------
-        None
+        norm_geo_dist : np.ndarray
+            Cell by cell geodesic distance matrix.
 
         Notes
         -----
@@ -139,7 +227,7 @@ class sonata(object):
         kmode: 'connectivity'/'distance'
         metric: 'euclidean'/'correlation'
         """
-        print('constructing knn graph ...')
+        print('===> constructing knn graph ...')
         nbrs = NearestNeighbors(n_neighbors=self.kmin, metric=self.kmetric, n_jobs=-1).fit(data)
         knn = nbrs.kneighbors_graph(data, mode = self.kmode)
 
@@ -151,9 +239,9 @@ class sonata(object):
             nbrs = NearestNeighbors(n_neighbors=self.kmin, metric=self.kmetric, n_jobs=-1).fit(data)
             knn = nbrs.kneighbors_graph(data, mode = self.kmode)
             connected_components = sp.csgraph.connected_components(knn, directed=False)[0]
-        print('final k ={}'.format(self.kmin))
+        print('final k = {}'.format(self.kmin))
 
-        # calculate the shortest distance between nodes
+        # calculate the shortest distance between cells
         dist = sp.csgraph.floyd_warshall(knn, directed=False)
         
         dist_max = np.nanmax(dist[dist != np.inf])
@@ -164,20 +252,59 @@ class sonata(object):
 
         self.geo_mat = norm_geo_dist
         self.knn = knn
+        return norm_geo_dist
     
-    def geo_similarity(self, geo_dist: np.ndarray) -> np.ndarray:
+    def cell_ambiguity(self, geo_mat: np.ndarray) -> np.ndarray:
+        """
+        Calculate cell-wise ambiguity.
+
+        Parameters
+        ----------
+        geo_mat : numpy.ndarray
+            Cell by cell geodesic distance matrix.
+
+        Returns
+        -------
+        clean_cell_amat : np.ndarray
+            Cell by cell safeguarded and calibrated ambiguity matrix.    
+
+        Notes
+        -----
+        This function calculates cell-wise ambiguity using a series of steps:
+        1. It computes an initial cell-wise similarity matrix 'init_cell_amat' using the 'self.cell_similarity' function.
+        2. It then applies a safeguard to the ambiguity calculation using the 'self.safe_ambiguity' function.
+        3. Finally, it calibrates the ambiguity using the 'self.fit_spline' function and stores the result in 'self.cell_amat'.
+
+        """
+        print('===> calculating cell-wise ambiguity ...')
+        l1_mat = self.geo_similarity(geo_mat)
+        self.l1_mat = l1_mat
+
+        # ambiguity
+        init_cell_amat = self.cell_similarity(l1_mat)
+
+        # ambiguity safeguard
+        safe_cell_amat = self.safe_ambiguity(geo_mat, l1_mat)
+
+        # ambiguity calibration
+        clean_cell_amat = self.fit_spline(geo_mat, safe_cell_amat)
+
+        self.cell_amat = clean_cell_amat
+        return clean_cell_amat
+
+    def geo_similarity(self, geo_mat: np.ndarray) -> np.ndarray:
         """
         Calculate the L1 distance similarity matrix for geodesic distances.
 
         Parameters
         ----------
-        geo_dist : numpy.ndarray
-            An array representing geodesic distances.
+        geo_mat : np.ndarray
+            Cell by cell geodesic distance matrix.
 
         Returns
         -------
-        numpy.ndarray
-            The L1 distance similarity matrix.
+        l1_dist : np.ndarray
+            Cell by cell L1 distance similarity matrix.
 
         Notes
         -----
@@ -186,23 +313,23 @@ class sonata(object):
         The resulting matrix represents the geodesic similarity between different cells.
 
         """
-        sorted_geo_dist = np.sort(geo_dist, axis=1)
+        sorted_geo_dist = np.sort(geo_mat, axis=1)
         l1_dist = cdist(sorted_geo_dist, sorted_geo_dist, 'cityblock') / sorted_geo_dist.shape[1]
         return l1_dist
-    
+
     def cell_similarity(self, mat: np.ndarray) -> np.ndarray:
         """
         Calculate initial cell-wise ambiguity matrix.
 
         Parameters
         ----------
-        mat : numpy.ndarray
-            Input matrix for L1 distance similarity calculation.
+        mat : np.ndarray
+            Cell by cell L1 distance similarity matrix.
 
         Returns
         -------
-        numpy.ndarray
-            The cell-wise ambiguity matrix.
+        cell_amat : numpy.ndarray
+            The initial cell by cell ambiguity matrix.
 
         Notes
         -----
@@ -222,43 +349,21 @@ class sonata(object):
                                                                     np.min(cell_amat, axis=1, keepdims=True))
         return cell_amat
 
-    def cell_ambiguity(self):
-        """
-        Calculate cell-wise ambiguity.
-
-        Notes
-        -----
-        This function calculates cell-wise ambiguity using a series of steps:
-        1. It computes an initial cell-wise similarity matrix 'init_cell_amat' using the 'self.cell_similarity' function.
-        2. It then applies a safeguard to the ambiguity calculation using the 'self.safe_ambiguity' function.
-        3. Finally, it calibrates the ambiguity using the 'self.fit_spline' function and stores the result in 'self.cell_amat'.
-
-        """
-        print('calculating cell-wise ambiguity ...')
-        # ambiguity
-        init_cell_amat = self.cell_similarity(self.l1_mat)
-
-        # ambiguity safeguard
-        cell_amat_safe = self.safe_ambiguity(self.l1_mat)
-
-        # ambiguity calibration
-        cell_amat_clean = self.fit_spline(cell_amat_safe)
-
-        self.cell_amat = cell_amat_clean
-
-    def safe_ambiguity(self, mat: np.ndarray) -> np.ndarray:
+    def safe_ambiguity(self, geo_mat: np.ndarray, l1_mat: np.ndarray) -> np.ndarray:
         """
         Apply a safeguard to cell-wise ambiguity calculation.
 
         Parameters
         ----------
-        mat : numpy.ndarray
-            Input matrix for ambiguity calculation.
+        geo_mat : numpy.ndarray
+            Cell by cell geodesic distance matrix.
+        l1_mat : numpy.ndarray
+            Cell by cell L1 distance similarity matrix.
 
         Returns
         -------
-        numpy.ndarray
-            The safeguarded cell-wise ambiguity matrix.
+        safe_cell_amat : numpy.ndarray
+            The safeguarded cell by cell ambiguity matrix.
 
         Notes
         -----
@@ -268,55 +373,57 @@ class sonata(object):
         The safeguarded cell-wise ambiguity matrix is then returned.
 
         """
-        n = self.geo_mat.shape[0]
-        geo_mat_shuffled = self.geo_mat.copy().flatten()
+        n = geo_mat.shape[0]
+        geo_mat_shuffled = geo_mat.copy().flatten()
         np.random.shuffle(geo_mat_shuffled)
-        geo_mat_shuffled = geo_mat_shuffled.reshape(self.geo_mat.shape)
+        geo_mat_shuffled = geo_mat_shuffled.reshape(geo_mat.shape)
         l1_mat_shuffled = self.geo_similarity(geo_mat_shuffled)
 
-        percent_l1 = np.percentile(mat, q=self.percnt_thres, axis=1)
+        percent_l1 = np.percentile(l1_mat, q=self.percnt_thres, axis=1)
         percent_l1_shuffled = np.percentile(l1_mat_shuffled, q=self.percnt_thres, axis=1)
         control_vec = percent_l1 * np.sign(percent_l1 - percent_l1_shuffled)
         l1_mat_aug = np.zeros((n+1, n+1))
-        l1_mat_aug[:n, :n] = mat
+        l1_mat_aug[:n, :n] = l1_mat
         l1_mat_aug[n, :n] = control_vec
         l1_mat_aug[:n, n] = control_vec
-        cell_amat_safe = self.cell_similarity(l1_mat_aug)
+        safe_cell_amat = self.cell_similarity(l1_mat_aug)
 
-        cell_vec_aug = cell_amat_safe[:n, n]
-        cell_amat_safe = cell_amat_safe[:n, :n]
+        cell_vec_aug = safe_cell_amat[:n, n]
+        safe_cell_amat = safe_cell_amat[:n, :n]
         # Ambiguous value should not be higher than baseline (cell_vec_aug)
-        for node_idx in range(n):
-            cell_amat_safe[node_idx, :] = np.maximum(cell_amat_safe[node_idx, :], cell_vec_aug[node_idx])
-        return cell_amat_safe
+        for cell_idx in range(n):
+            safe_cell_amat[cell_idx, :] = np.maximum(safe_cell_amat[cell_idx, :], cell_vec_aug[cell_idx])
+        return safe_cell_amat
 
-    def fit_spline(self, cell_amat: np.ndarray, r: int = 10) -> np.ndarray:
+    def fit_spline(self, geo_mat: np.ndarray, cell_amat: np.ndarray, r: int = 10) -> np.ndarray:
         """
         Fit a spline to mitigate the distance-related biases of cell-wise ambiguity.
 
         Parameters
         ----------
+        geo_mat : numpy.ndarray
+            Cell by cell geodesic distance matrix.
         cell_amat : numpy.ndarray
-            The cell-wise ambiguity matrix.
+            Cell by cell ambiguity matrix.
         r : int, optional
             The smoothing radius for averaging nearest neighbors, by default 10.
 
         Returns
         -------
-        numpy.ndarray
-            The cell-wise ambiguity matrix without distance-related biases.
+        clean_cell_amat : numpy.ndarray
+            Cell by cell ambiguity matrix without distance-related biases.
 
         Notes
         -----
         This function fits a spline to the cell-wise ambiguity matrix to mitigate the distance-related biases.
         It fits the univariate spline using scipy package after smoothing values within a specified radius 'r'. 
         Then the neighborhood noises are removed.
-        The resulting matrix represents the ambiguity values without distance-related biases.
+        The resulting matrix represents the cell by cell ambiguity values without distance-related biases.
 
         """
-        cell_amat_clean = np.copy(cell_amat)
-        for node_id in range(cell_amat.shape[0]):
-            tuple_arr = list(zip(self.geo_mat[node_id, :], cell_amat[node_id, :], ))
+        clean_cell_amat = np.copy(cell_amat)
+        for cell_id in range(cell_amat.shape[0]):
+            tuple_arr = list(zip(geo_mat[cell_id, :], cell_amat[cell_id, :], ))
             tuple_arr.sort(key=lambda x: x[0])
 
             geo_arr = np.asarray([x[0] for x in tuple_arr], dtype=float)
@@ -348,97 +455,104 @@ class sonata(object):
 
             if len(curve_m) > 0:
                 idx = int(dv1_roots[curve_m[0]])
-                cell_amat_clean[node_id, self.geo_mat[node_id, :] <= geo_arr[idx]] = np.min(cell_amat_clean[node_id, :])
+                clean_cell_amat[cell_id, geo_mat[cell_id, :] <= geo_arr[idx]] = np.min(clean_cell_amat[cell_id, :])
         
-        return cell_amat_clean
+        return clean_cell_amat
 
-
-    def group_ambiguity(self, data: np.ndarray)  -> typing.Generator[np.ndarray, None, None]:
+    def group_ambiguity(self, data: np.ndarray, cell_amat:np.ndarray)  -> dict:
         """
-        Calculate group-wise ambiguity and provide the alternaltive mappings.
+        Calculate group-wise ambiguity and provide the ambiguous groups.
 
         Parameters
         ----------
-        data : numpy.ndarray
-            The input data.
+        data : np.ndarray
+            Input data for which the self-ambiguity should be checked.
+        cell_amat : numpy.ndarray
+            Cell by cell ambiguity matrix.
 
         Returns
         -------
-        map_mat : Generator
-            The generator of the alternaltive mapping matrices.
+        ambiguous_cell_groups : dict
+            A dictionary of ambiguous groups, where key is the group label and 
+            value is an array containing indices of cells in the ambiguous group.
             
         Notes
         -----
-        This function calculates group-wise ambiguity, which involves selecting ambiguous nodes,
-        finding ambiguous groups and generates matrices of alternative mappings.
-        The resulting generator generates matrices of alternaltive mappings.
+        This function calculates group-wise ambiguity, which involves selecting ambiguous cells
+        and finding ambiguous groups.
 
         """
-        print('calculating group-wise ambiguity ...')
-        ambiguous_nodes = self.select_ambiguous_nodes()
-        unambiguous_nodes = np.setdiff1d(list(range(data.shape[0])), ambiguous_nodes)
-        self.ambiguous_nodes = ambiguous_nodes
+        print('===> calculating group-wise ambiguity ...')
+        ambiguous_cells = self.select_ambiguous_cells(cell_amat)
+        self.ambiguous_cells = ambiguous_cells
 
-        if len(ambiguous_nodes) == 0:
-            print("There is no ambiguity")
-            map_mat = None
+        if len(ambiguous_cells) == 0:
+            print("There is no ambiguity!")
+            ambiguous_cell_groups = {}
         else:
-            ambiguous_node_groups = self.find_ambiguous_groups(data, ambiguous_nodes)
-            map_mat = self.map_ambiguous_groups(data, ambiguous_node_groups, unambiguous_nodes)
+            ambiguous_cell_groups = self.find_ambiguous_groups(data, cell_amat, ambiguous_cells)
+            print("There are {} ambiguity groups.".format(len(ambiguous_cell_groups)))
+            
+        return ambiguous_cell_groups
 
-        return map_mat
-        
-
-    def select_ambiguous_nodes(self) -> np.ndarray:
+    def select_ambiguous_cells(self, cell_amat: np.ndarray) -> np.ndarray:
         """
-        Select ambiguous nodes.
+        Select ambiguous cells.
+
+        Parameters
+        ----------
+        cell_amat : numpy.ndarray
+            Cell by cell ambiguity matrix.
 
         Returns
         -------
-        numpy.ndarray
-            An array of indices representing ambiguous nodes.
+        ambiguous_cells : numpy.ndarray
+            An array of indices representing ambiguous cells.
 
         Notes
         -----
-        This function selects ambiguous nodes based on a threshold 'self.t'
+        This function selects ambiguous cells based on a threshold 'self.t'
         applied to the cell-wise ambiguity matrix.
 
         """
-        cell_amat_copy = self.cell_amat.copy()
+        cell_amat_copy = cell_amat.copy()
         n = cell_amat_copy.shape[0]
         cell_amat_copy[cell_amat_copy <= self.t] = 0
         cell_amat_sum_arr = cell_amat_copy.sum(axis=1)
-        ambiguous_nodes = np.where(cell_amat_sum_arr > 0)[0]
-        return ambiguous_nodes
+        ambiguous_cells = np.where(cell_amat_sum_arr > 0)[0]
+        return ambiguous_cells
 
-    def find_ambiguous_groups(self, data: np.ndarray, ambiguous_nodes: np.ndarray) -> list:
+    def find_ambiguous_groups(self, data: np.ndarray, cell_amat: np.ndarray, ambiguous_cells: np.ndarray) -> dict:
         """
         Find ambiguous groups using semi-supervised clustering.
 
         Parameters
         ----------
-        data : numpy.ndarray
-            The input data.
-        ambiguous_nodes : numpy.ndarray
-            An array of indices representing ambiguous nodes.
+        data : np.ndarray
+            Input data for which the self-ambiguity should be checked.
+        cell_amat : np.ndarray
+            Cell by cell ambiguity matrix.
+        ambiguous_cells : numpy.ndarray
+            An array of indices representing ambiguous cells.
 
         Returns
         -------
-        list
-            A list of lists, where each inner list contains indices of nodes in an ambiguous group.
+        ambiguous_cell_groups : dict
+            A dictionary of ambiguous groups, where key is the group label and 
+            value is a array containing indices of cells in an ambiguous group.
 
         Notes
         -----
         This function uses semi-supervised clustering with cannot-link constraints to find ambiguous groups.
-        It returns a list of ambiguous node groups based on the clustering results.
+        It returns a dictionary of ambiguous cell groups based on the clustering results and a list of ambiguous cell pairs.
 
         using semi-supervised-clustering with cannot link
         code: https://github.com/datamole-ai/active-semi-supervised-clustering
 
         """
         
-        data_mat_ambiguous = data[ambiguous_nodes, :]
-        cell_amat_ambiguous = self.cell_amat[ambiguous_nodes, :][:, ambiguous_nodes]
+        data_mat_ambiguous = data[ambiguous_cells, :]
+        cell_amat_ambiguous = cell_amat[ambiguous_cells, :][:, ambiguous_cells]
 
         # ambiguity threshold
         ambiguous_indices = np.where(cell_amat_ambiguous > self.t)
@@ -446,27 +560,31 @@ class sonata(object):
         # all cell-wise ambiguity
         cannot_links = list(zip(ambiguous_indices[0], ambiguous_indices[1]))
         
-        # group ambiguous nodes  -- elbow method to choose k
-        print('deciding best k for clustering ...')
+        # group ambiguous cells  -- deciding group numbers K by elbow method
         if self.K == None:
-            self.elbow_k(data_mat_ambiguous, cannot_links, k_range=10)
-            print('K = {} groups choosen by elbow method'.format(self.K))
-        clusterer = PCKMeans(n_clusters=self.K)
+            print('deciding best k for clustering ...')
+            best_k = self.elbow_k(data_mat_ambiguous, cannot_links, k_range=10)
+            self.K = best_k
+            print('K = {} groups choosen by elbow method'.format(best_k))
+        else:
+            print('Number of clusters K are specified as {}'.format(self.K))
+        clusterer = PCKMeans(n_clusters=best_k)
         clusterer.fit(data_mat_ambiguous, cl=cannot_links)
         labels = np.asarray(clusterer.labels_, dtype=int)
 
-        ambiguous_node_groups = []
+        ambiguous_cell_groups = {}
         for class_label in np.unique(labels):
             class_indices = np.where(labels == class_label)[0]
-            ambiguous_node_groups.append(ambiguous_nodes[class_indices])
+            ambiguous_cell_groups[class_label] = ambiguous_cells[class_indices]
         
         self.ambiguous_links = cannot_links
-        self.cluster_labels = labels
-        return ambiguous_node_groups
+        return ambiguous_cell_groups
  
-    def elbow_k(self, data: np.ndarray, cannot_link: list, k_range: int = 10):
+    def elbow_k(self, data: np.ndarray, cannot_link: list, k_range: int = 10) -> int:
         """
-        Determine the optimal number of clusters (k) using the elbow method.
+        Determine the optimal number of clusters (k) using the elbow method. 
+        Y axis of elbow is the ratio of ambiguity pairs within clusters and all possible pairs.
+        X axis of elbow is the ratio of cluster numbers and the max possible cluster number.
 
         Parameters
         ----------
@@ -477,6 +595,11 @@ class sonata(object):
         k_range : int, optional
             The range of k values to consider, by default 10.
 
+        Returns
+        -------
+        best_k : int
+            The best k choosen by elbow method.
+
         Notes
         -----
         This function determines the optimal number of clusters (k) using the elbow method.
@@ -486,7 +609,7 @@ class sonata(object):
         from active_semi_clustering.semi_supervised.pairwise_constraints import PCKMeans
         cl_arr = np.transpose(np.array(cannot_link))
 
-        # calculate # of ambiguity pairs for each k
+        # for each k, calculate # of ambiguity pairs within clusters 
         y_error = []
         for k in range(1, k_range):
             clusterer = PCKMeans(n_clusters=k)
@@ -511,84 +634,8 @@ class sonata(object):
         self.K = best_k
         self.K_yerror = y_error
         self.K_xstep = x_step
+        return best_k
 
-    def map_ambiguous_groups(self, data: np.ndarray, ambiguous_node_groups: list, unambiguous_nodes: np.ndarray) -> typing.Generator[np.ndarray, None, None]:
-        """
-        Generate alternative mappings.
-
-        Parameters
-        ----------
-        data : numpy.ndarray
-            The input data.
-        ambiguous_node_groups : list
-            A list of lists, where each inner list contains indices of nodes in an ambiguous group.
-        unambiguous_nodes : numpy.ndarray
-            An array of indices representing unambiguous nodes.
-
-        Returns
-        -------
-        map_mat : Generator
-            The generator of the alternaltive mapping matrices.
-
-        Notes
-        -----
-        This function generates alternaltive mappings by aligning ambiguous cells using optimal transport.
-        It returns a generator generating the matrices of alternaltive mappings.
-
-        """
-        np.seterr(under='ignore')
-        ambiguous_nodes = np.asarray([], dtype=int)
-        for group in ambiguous_node_groups:
-            ambiguous_nodes = np.concatenate((ambiguous_nodes, group))
-        assert data.shape[0] == len(ambiguous_nodes)+len(unambiguous_nodes)
-
-        ### evaluate valid group
-        if self.eval_knn:
-            valid_perm = self.eval_valid_group_knn(ambiguous_node_groups, unambiguous_nodes)
-        else:
-            valid_perm= list(itertools.permutations(range(len(ambiguous_node_groups))))[1:]
-        print("all vaild perms are: ", valid_perm)
-
-        assert len(ambiguous_node_groups) > 1
-        for perms in valid_perm:
-            # keep the diagonal for original nodes
-            map_mat = np.zeros_like(self.geo_mat)
-            print("perms: ", perms)
-
-            # keep the diagonal for unambiguous nodes
-            for node in unambiguous_nodes: map_mat[node, node] = 1.0        
-
-            for i in range(len(ambiguous_node_groups)):
-                group_idx1 = i
-                group_idx2 = perms[i]
-
-                node_group1 = ambiguous_node_groups[group_idx1]
-                node_group2 = ambiguous_node_groups[group_idx2]
-
-                if group_idx1 == group_idx2:
-                    # keep the diagonal for unchanged nodes
-                    for node in np.concatenate((node_group1, node_group2)): map_mat[node, node] = 1.0 
-                else:
-                    print('changed group id: ', group_idx1, group_idx2)
-                    # aligning ambiguous group pairs
-                    cost = 1-self.cell_amat
-                    cost = cost[node_group1, :][:, node_group2]
-                    p1 = ot.unif(len(node_group1))
-                    p2 = ot.unif(len(node_group2))
-                    T = ot.emd(p1, p2, cost)
-                    T = normalize(T, norm='l1', axis=1, copy=False)
-
-                    # fill in the T matrix for mapped nodes 
-                    for group1_idx in range(len(node_group1)):
-                        group1_node = node_group1[group1_idx]
-                        for group2_idx in range(len(node_group2)):
-                            group2_node = node_group2[group2_idx]
-                            map_mat[group1_node, group2_node] = T[group1_idx, group2_idx]
-
-            yield map_mat
-
-
-    # second graduate for k elbow
     def second_grad(self, k_arr: list, step: float) -> np.ndarray:
         """
         Calculate the second gradient for the elbow method.
@@ -619,16 +666,16 @@ class sonata(object):
 
         return second_grad
 
-    def eval_valid_group_knn(self, ambiguous_node_groups: list, unambiguous_nodes: np.ndarray) -> list:
+    def eval_valid_group_knn(self, ambiguous_cell_groups: list, unambiguous_cells: np.ndarray) -> list:
         """
         Evaluate valid groups based on k-nearest neighbors.
 
         Parameters
         ----------
-        ambiguous_node_groups : list
-            A list of lists, where each inner list contains indices of nodes in an ambiguous group.
-        unambiguous_nodes : numpy.ndarray
-            An array of indices representing unambiguous nodes.
+        ambiguous_cell_groups : list
+            A list of lists, where each inner list contains indices of cells in an ambiguous group.
+        unambiguous_cells : numpy.ndarray
+            An array of indices representing unambiguous cells.
 
         Returns
         -------
@@ -645,19 +692,19 @@ class sonata(object):
         knn_arr = knn.toarray()
 
         connected_groups = []
-        for tup in list(itertools.combinations(range(len(ambiguous_node_groups)), 2)):
+        for tup in list(itertools.combinations(range(len(ambiguous_cell_groups)), 2)):
             group_idx1, group_idx2 = tup[0], tup[1]
-            node_group1 = ambiguous_node_groups[group_idx1]
-            node_group2 = ambiguous_node_groups[group_idx2]
-            sub_knn_arr = knn_arr[node_group1, :][:, node_group2]
+            cell_group1 = ambiguous_cell_groups[group_idx1]
+            cell_group2 = ambiguous_cell_groups[group_idx2]
+            sub_knn_arr = knn_arr[cell_group1, :][:, cell_group2]
             if np.sum(sub_knn_arr) > 0.0:
                 connected_groups.append(tup)
         print("connected_groups_ambiguous: ", connected_groups)
 
-        for group_idx1 in range(len(ambiguous_node_groups)):
-            group_idx2 = -1 # unambiguous nodes
-            node_group1 = ambiguous_node_groups[group_idx1]
-            sub_knn_arr = knn_arr[node_group1, :][:, unambiguous_nodes]
+        for group_idx1 in range(len(ambiguous_cell_groups)):
+            group_idx2 = -1 # unambiguous cells
+            cell_group1 = ambiguous_cell_groups[group_idx1]
+            sub_knn_arr = knn_arr[cell_group1, :][:, unambiguous_cells]
             if np.sum(sub_knn_arr) > 0:
                 connected_groups.append((group_idx1, group_idx2))
         connected_groups = np.array(connected_groups)
@@ -665,9 +712,9 @@ class sonata(object):
         
         valid_perm = []
         sorted_connected_groups = np.sort(connected_groups, axis = 1)
-        for perms in list(itertools.permutations(range(len(ambiguous_node_groups))))[1:]:
+        for perms in list(itertools.permutations(range(len(ambiguous_cell_groups))))[1:]:
             new_connected_groups = np.copy(connected_groups)
-            for i in range(len(ambiguous_node_groups)):
+            for i in range(len(ambiguous_cell_groups)):
                 group_idx1 = i
                 group_idx2 = perms[i]
                 if group_idx1 != group_idx2:
@@ -678,3 +725,28 @@ class sonata(object):
                 valid_perm.append(perms)
 
         return valid_perm
+
+    def smap2amap(
+        self,
+        sonata_mappings: typing.Generator[np.ndarray, None, None], 
+        aligner_mapping: np.ndarray
+        ) -> typing.Generator[np.ndarray, None, None]:
+        """
+        Converts SONATA self-alternaltive mappings to a manifold aligner alternaltive mappings given a manifold aligner mapping.
+
+        Parameters
+        ----------
+        sonata_mappings : typing.Generator[np.ndarray, None, None]
+            A generator yielding self-alternaltive mappings obtained from SONATA algorithm.
+        aligner_mapping : np.ndarray
+            The mapping matrix obtained from a manifold aligner algorithm.
+
+        Yields
+        ------
+        typing.Generator[np.ndarray, None, None]
+            A generator yielding alternative mappings for a mapping matrix given by a manifold aligner algorithm.
+
+        """        
+        for idx, m in enumerate(sonata_mappings, start=1):
+            map_mat_aligner = np.matmul(m, aligner_mapping)
+            yield map_mat_aligner

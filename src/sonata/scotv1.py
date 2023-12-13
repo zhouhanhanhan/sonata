@@ -269,6 +269,7 @@ class SCOT(object):
         -----
         The method body is not implemented in this documentation.
         """
+		print("======================Running SCOT======================")
 		if normalize:
 			self.normalize(norm=norm)
 		if init_marginals:
