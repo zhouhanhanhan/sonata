@@ -17,29 +17,29 @@ def preserve_docstring(original_func):
 #wrapped_normalize = preserve_docstring(sklearn.preprocessing.normalize)
 def wrapped_normalize(X: np.ndarray, norm: str='l2', axis: int = 1) -> np.ndarray:
     """
-    Normalize samples individually to unit norm.
+    Normalize the input data array. Possible normalization types are 'l1', 'l2' and 'max'.
 
     Parameters
     ----------
     X : np.ndarray
-        The data array to be normalized.
-    norm : str, optional
-        The norm to use to normalize each non zero sample 
-        (or each non-zero feature if axis is 0), options are 'l1', 'l2' and 'max', by default 'l2'.
+        Input array to be normalized.
+    norm : str
+        Type of normalization to apply. Options: 'l1', 'l2', 'max'.
     axis : int, optional
-        Axis used to normalize the data along. If 1, independently normalize each sample, 
-        otherwise (if 0) normalize each feature, by default 1.
+        Axis along which the normalization is performed.
+        Default is 1.
 
     Returns
     -------
-    X_normalized : np.ndarray
-        Normalized input X.
+    np.ndarray
+        Normalized array.
+
     """
     return sklearn.preprocessing.normalize(X, norm, axis=axis)
 
 def wrapped_pca(X: np.ndarray, n_components: int) -> np.ndarray:
     """
-    Perform Principal Component Analysis (PCA) on the input data.
+    Denoise the input data array by perform Principal Component Analysis (PCA).
 
     Parameters
     ----------
@@ -72,7 +72,7 @@ def load_data(matrix_file: str) -> np.ndarray:
 
     Returns
     -------
-    numpy.ndarray
+    np.ndarray
         The loaded data as a NumPy array.
 
     Notes
@@ -90,14 +90,12 @@ def load_data(matrix_file: str) -> np.ndarray:
         data = sp.load_npz(matrix_file)
     else:
         data = np.load(matrix_file) 
-
-    # if file_type != 'npz':
-        # print('data size={}'.format(data.shape))
     return data
 
 def projection_barycentric(x: np.ndarray, y: np.ndarray, coupling: np.ndarray, XontoY: bool = True) -> tuple:
     """
-    Perform barycentric projection from one domain to another.
+    Perform barycentric projection. This function projects points from two datasets (x and y) 
+    onto a common coordinate system based on an alignment mapping
 
     Parameters
     ----------
@@ -106,7 +104,7 @@ def projection_barycentric(x: np.ndarray, y: np.ndarray, coupling: np.ndarray, X
     y : numpy.ndarray
         The data points in the target domain.
     coupling : numpy.ndarray
-        The coupling matrix representing the relationship between domains.
+        The alignment coupling matrix representing the relationship between domains.
     XontoY : bool, optional
         Flag indicating the direction of projection, by default True (X onto Y).
 

@@ -81,29 +81,10 @@ class SCOT(object):
 		self.y_aligned=None #aligned datasets to return: domain2
 
 	def init_marginals(self):
-		"""
-        Without any prior information, we set the probabilities to what we observe empirically: uniform over all observed sample
-        """
 		self.p= ot.unif(self.X.shape[0])
 		self.q = ot.unif(self.y.shape[0])
 
 	def normalize(self, norm: str = "l2", bySample: bool = True):
-		"""
-        Normalizes the data in each domain according to the specified norm and axis.
-
-        Parameters
-        ----------
-        norm : str, optional
-            Type of normalization ('l2', 'l1', 'max', 'zscore'). Default is 'l2'.
-        bySample : bool, optional
-            Determines the axis along which the normalization is performed. True for normalization 
-            by samples (axis=1), False for features (axis=0). Default is True.
-
-        Raises
-        ------
-        AssertionError
-            If the norm argument is not one of 'max', 'l1', 'l2', or 'zscore'.
-        """
 		assert (norm in ["l1","l2","max", "zscore"]), "Norm argument has to be either one of 'max', 'l1', 'l2' or 'zscore'. If you would like to perform another type of normalization, please give SCOT the normalize data and set the argument normalize=False when running the algorithm."
 
 		if (bySample==True or bySample==None):
@@ -119,28 +100,6 @@ class SCOT(object):
 			self.X, self.y =normalize(self.X, norm=norm, axis=axis), normalize(self.y, norm=norm, axis=axis)
 
 	def construct_graph(self, k: int, mode: str = "connectivity", metric: str = "correlation") -> Tuple[csr_matrix, csr_matrix]:
-		"""
-        Constructs k-nearest neighbor graphs for each domain.
-
-        Parameters
-        ----------
-        k : int
-            Number of neighbors for k-nearest neighbor graphs.
-        mode : str, optional
-            Type of graph ('connectivity' or 'distance'). Default is 'connectivity'.
-        metric : str, optional
-            Metric for constructing nearest neighbor graphs. Default is 'correlation'.
-
-        Returns
-        -------
-        Tuple[csr_matrix, csr_matrix]
-            A tuple containing the k-nearest neighbor graphs for domain 1 and domain 2.
-
-        Raises
-        ------
-        AssertionError
-            If the mode argument is not one of 'connectivity' or 'distance'.
-        """
 		assert (mode in ["connectivity", "distance"]), "Norm argument has to be either one of 'connectivity', or 'distance'. "
 		if mode=="connectivity":
 			include_self=True
@@ -153,14 +112,6 @@ class SCOT(object):
 		return self.Xgraph, self.ygraph
 
 	def init_distances(self) -> Tuple[np.ndarray, np.ndarray]:
-		"""
-        Computes and normalizes the shortest path distances based on the constructed graphs.
-
-        Returns
-        -------
-        Tuple[np.ndarray, np.ndarray]
-            A tuple containing the normalized shortest path distance matrices for domain 1 and domain 2.
-        """
 		# Compute shortest distances
 		X_shortestPath=dijkstra(csgraph= csr_matrix(self.Xgraph), directed=False, return_predecessors=False)
 		y_shortestPath=dijkstra(csgraph= csr_matrix(self.ygraph), directed=False, return_predecessors=False)
@@ -178,25 +129,6 @@ class SCOT(object):
 		return self.Cx, self.Cy
 
 	def find_correspondences(self, e: float, verbose: bool = True) -> float:
-		"""
-        Finds the optimal transport correspondences between the two domains.
-
-        Parameters
-        ----------
-        e : float
-            Regularization constant for entropic regularization.
-        verbose : bool, optional
-            Whether to print optimization progress. Default is True.
-
-        Returns
-        -------
-        float
-            The Gromov-Wasserstein distance between domains after alignment.
-
-        Notes
-        -----
-        Updates the coupling matrix and sets the convergence flag.
-        """
 		self.coupling, log= ot.gromov.entropic_gromov_wasserstein(self.Cx, self.Cy, self.p, self.q, loss_fun='square_loss', epsilon=e, log=True, verbose=verbose)
 		self.gwdist=log['gw_dist']
 
@@ -209,20 +141,6 @@ class SCOT(object):
 		return self.gwdist
 
 	def barycentric_projection(self, XontoY: bool = True) -> Tuple[np.ndarray, np.ndarray]:
-		"""
-        Performs barycentric projection to align the datasets.
-
-        Parameters
-        ----------
-        XontoY : bool, optional
-            Determines the direction of barycentric projection. If True, projects domain1 onto domain2.
-            If False, projects domain2 onto domain1. Default is True.
-
-        Returns
-        -------
-        Tuple[np.ndarray, np.ndarray]
-            A tuple containing the aligned domain 1 and domain 2 datasets.
-        """
 		if XontoY:
 			#Projecting the first domain onto the second domain
 			self.y_aligned=self.y
@@ -296,37 +214,6 @@ class SCOT(object):
 		return self.X_aligned, self.y_aligned
 
 	def search_scot(self, ks: np.array, es: np.array, all_values:bool = False,  mode: str= "connectivity", metric: str="correlation", normalize: bool=True, norm: str="l2", init_marginals:bool=True) -> Tuple[np.ndarray,np.ndarray,float, int, int]:
-		'''
-		Performs a hyperparameter sweep for the given values of k and epsilon.
-
-		Parameters:
-        ----------
-		ks : array-like
-			The range of k values to be tested.
-		es : array-like
-			The range of epsilon values to be tested.
-		all_values : bool, optional
-			If True, return all k, epsilon, and GW values. Otherwise, only return the parameters corresponding to the lowest GW distance. Default is False.
-		mode : str, optional
-			The mode of graph construction. Default is "connectivity".
-		metric : str, optional
-			The distance metric to be used. Default is "correlation".
-		normalize : bool, optional
-			If True, normalize the data. Default is True.
-		norm : str, optional
-			The norm to be used for normalization. Default is "l2".
-		init_marginals : bool, optional
-			If True, initialize marginals. Default is True.
-
-		Returns:
-        ----------
-		X_aligned, y_aligned : numpy.ndarray
-			The aligned data.
-		gw_sweep, k_sweep, e_sweep : numpy.ndarray
-			The sweep of GW, k, and epsilon values. Only returned if all_values is True.
-		gmin, k_best, e_best : float, int, int
-			The minimum GW distance and corresponding k and epsilon values. Only returned if all_values is False.
-		'''
 		# initialize alignment
 		if normalize:
 			self.normalize(norm=norm)
@@ -377,29 +264,6 @@ class SCOT(object):
 			return X_aligned, y_aligned, gmin, k_best, e_best
 
 	def unsupervised_scot(self, normalize: bool=False, norm: str='l2') -> Tuple[np.ndarray, np.ndarray, float, int, float]:
-		'''
-		Unsupervised hyperparameter tuning algorithm to find an alignment
-		by using the GW distance as a measure of alignment.
-
-		Parameters
-		----------
-		self : object
-			A reference to the current instance of the class.
-		normalize : bool, optional
-			Whether to normalize the data or not. Defaults to False.
-		norm : str, optional
-			The type of norm to be used for normalization. Defaults to 'l2'.
-
-		Returns
-		-------
-		tuple
-			X_aligned (np.ndarray): Aligned version of the first input dataset.
-			y_aligned (np.ndarray): Aligned version of the second input dataset.
-			g_best (float): Best alignment score.
-			k_best (int): Optimal number of neighbors for alignment.
-			e_best (float): Optimal epsilon for alignment.
-
-		'''
 		# use k = 20% of # sample or k = 50 if dataset is large
 		n = min(self.X.shape[0], self.y.shape[0])
 		k_start = min(n // 5, 50)

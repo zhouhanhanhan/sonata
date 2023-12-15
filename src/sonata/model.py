@@ -52,7 +52,7 @@ class sonata(object):
     - eval_knn: Evaluate whether the alternative alignment distorts the data manifold by changing the mutual nearest neighbors of cells. Default=True.    
     """
 
-    def __init__(self, kmin=10, sigma=0.1, t=0.1, kmax=200, kmode="distance", kmetric="euclidean", percnt_thres=95, eval_knn=False) -> None:
+    def __init__(self, kmin:int=10, sigma:float=0.1, t:float=0.1, kmax:int=200, kmode:str="distance", kmetric:str="euclidean", percnt_thres:int=95, eval_knn:bool=False) -> None:
         self.initialize_class(kmin, sigma, t, kmax, kmode, kmetric, percnt_thres, eval_knn)
     def initialize_class(self, kmin:int=10, sigma:float=0.1, t:float=0.1, kmax:int=200, kmode:str="distance", kmetric:str="euclidean", percnt_thres:int=95, eval_knn:bool=False) -> None:
         """
@@ -118,7 +118,7 @@ class sonata(object):
 
         Returns
         -------
-        ambiguous_cell_groups : dict
+        dict
             A dictionary containing the groups of ambiguous cells identified in the input data.
             Each key represents a group, and the corresponding value is an array of cells belonging to that group.
         """
@@ -136,7 +136,7 @@ class sonata(object):
 
     def mapping_mat(self, data: np.ndarray, ambiguous_cell_groups: dict) -> typing.Generator[np.ndarray, None, None]:
         """
-        Generate self-alternative mappings.
+        Generate all self-alternative cell by cell mapping matrics based on ambiguous cell groups.
 
         Parameters
         ----------
@@ -148,12 +148,12 @@ class sonata(object):
 
         Yields
         ------
-        Generator : typing.Generator[np.ndarray, None, None]
+        typing.Generator[np.ndarray, None, None]
             The generator of the self-alternaltive np.ndarray mapping matrices.
 
         Notes
         -----
-        This function generates self-alternaltive mappings by aligning ambiguous cells using optimal transport.
+        This function generates self-alternaltive cell by cell mappings by aligning ambiguous cells using optimal transport.
         It returns a generator generating the matrices of self-alternaltive mappings.
 
         """
@@ -218,7 +218,7 @@ class sonata(object):
 
         Returns
         -------
-        norm_geo_dist : np.ndarray
+        np.ndarray
             Cell by cell geodesic distance matrix.
 
         Notes
@@ -256,7 +256,7 @@ class sonata(object):
     
     def cell_ambiguity(self, geo_mat: np.ndarray) -> np.ndarray:
         """
-        Calculate cell-wise ambiguity.
+        Calculate cell-wise ambiguity given a geodesic distance matrix.
 
         Parameters
         ----------
@@ -265,7 +265,7 @@ class sonata(object):
 
         Returns
         -------
-        clean_cell_amat : np.ndarray
+        np.ndarray
             Cell by cell safeguarded and calibrated ambiguity matrix.    
 
         Notes
@@ -294,7 +294,7 @@ class sonata(object):
 
     def geo_similarity(self, geo_mat: np.ndarray) -> np.ndarray:
         """
-        Calculate the L1 distance similarity matrix for geodesic distances.
+        Calculate the L1 distance similarity matrix based on geodesic distance matrix.
 
         Parameters
         ----------
@@ -303,7 +303,7 @@ class sonata(object):
 
         Returns
         -------
-        l1_dist : np.ndarray
+        np.ndarray
             Cell by cell L1 distance similarity matrix.
 
         Notes
@@ -328,7 +328,7 @@ class sonata(object):
 
         Returns
         -------
-        cell_amat : numpy.ndarray
+        numpy.ndarray
             The initial cell by cell ambiguity matrix.
 
         Notes
@@ -362,7 +362,7 @@ class sonata(object):
 
         Returns
         -------
-        safe_cell_amat : numpy.ndarray
+        numpy.ndarray
             The safeguarded cell by cell ambiguity matrix.
 
         Notes
@@ -410,7 +410,7 @@ class sonata(object):
 
         Returns
         -------
-        clean_cell_amat : numpy.ndarray
+        numpy.ndarray
             Cell by cell ambiguity matrix without distance-related biases.
 
         Notes
@@ -472,7 +472,7 @@ class sonata(object):
 
         Returns
         -------
-        ambiguous_cell_groups : dict
+        dict
             A dictionary of ambiguous groups, where key is the group label and 
             value is an array containing indices of cells in the ambiguous group.
             
@@ -506,7 +506,7 @@ class sonata(object):
 
         Returns
         -------
-        ambiguous_cells : numpy.ndarray
+        numpy.ndarray
             An array of indices representing ambiguous cells.
 
         Notes
@@ -537,7 +537,7 @@ class sonata(object):
 
         Returns
         -------
-        ambiguous_cell_groups : dict
+        dict
             A dictionary of ambiguous groups, where key is the group label and 
             value is a array containing indices of cells in an ambiguous group.
 
@@ -597,7 +597,7 @@ class sonata(object):
 
         Returns
         -------
-        best_k : int
+        int
             The best k choosen by elbow method.
 
         Notes
@@ -649,7 +649,7 @@ class sonata(object):
 
         Returns
         -------
-        second_grad : numpy.ndarray
+        numpy.ndarray
             The second gradient values.
 
         Notes
@@ -679,7 +679,7 @@ class sonata(object):
 
         Returns
         -------
-        valid_perm : list
+        list
             A list of valid permutations for ambiguous groups.
 
         Notes
