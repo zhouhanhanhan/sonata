@@ -52,18 +52,18 @@ class sonata(object):
     - eval_knn: Evaluate whether the alternative alignment distorts the data manifold by changing the mutual nearest neighbors of cells. Default=True.    
     """
 
-    def __init__(self, kmin:int=10, sigma:float=0.1, t:float=0.1, kmax:int=200, kmode:str="distance", kmetric:str="euclidean", percnt_thres:int=95, eval_knn:bool=False) -> None:
-        self.initialize_class(kmin, sigma, t, kmax, kmode, kmetric, percnt_thres, eval_knn)
-    def initialize_class(self, kmin:int=10, sigma:float=0.1, t:float=0.1, kmax:int=200, kmode:str="distance", kmetric:str="euclidean", percnt_thres:int=95, eval_knn:bool=False) -> None:
+    def __init__(self, sigma:float, kmin:int=10, t:float=0.1, kmax:int=200, kmode:str="distance", kmetric:str="euclidean", percnt_thres:int=95, eval_knn:bool=False) -> None:
+        self.initialize_class(sigma, kmin, t, kmax, kmode, kmetric, percnt_thres, eval_knn)
+    def initialize_class(self, sigma:float, kmin:int=10, t:float=0.1, kmax:int=200, kmode:str="distance", kmetric:str="euclidean", percnt_thres:int=95, eval_knn:bool=False) -> None:
         """
         Initialize sonata instance with given parameters.
 
         Parameters
         ----------
+        sigma : float
+            Bandwidth parameter for cell-wise ambiguity (Aij), by default 0.1.
         kmin : int, optional
             The minimum number of neighbors to connect in the k-NN graph, by default 10.
-        sigma : float, optional
-            Bandwidth parameter for cell-wise ambiguity (Aij), by default 0.1.
         t : float, optional
             A threshold to ascertain the ambiguity status of individual cells before clustering them into groups, by default 0.1.
         kmax : int, optional
@@ -136,7 +136,7 @@ class sonata(object):
 
     def mapping_mat(self, data: np.ndarray, ambiguous_cell_groups: dict) -> typing.Generator[np.ndarray, None, None]:
         """
-        Generate all self-alternative cell by cell mapping matrics based on ambiguous cell groups.
+        Generate all self-ambiguity mapping matrics based on ambiguous cell groups.
 
         Parameters
         ----------
@@ -153,7 +153,7 @@ class sonata(object):
 
         Notes
         -----
-        This function generates self-alternaltive cell by cell mappings by aligning ambiguous cells using optimal transport.
+        This function generates self-ambiguity cell by cell mappings by aligning ambiguous cells using optimal transport.
         It returns a generator generating the matrices of self-alternaltive mappings.
 
         """
@@ -732,7 +732,7 @@ class sonata(object):
         aligner_mapping: np.ndarray
         ) -> typing.Generator[np.ndarray, None, None]:
         """
-        Converts SONATA self-alternaltive mappings to a manifold aligner alternaltive mappings given a manifold aligner mapping.
+        Converts alternaltive mappings given a manifold aligner mapping based on SONATA self-ambiguity mapping matrics.
 
         Parameters
         ----------
