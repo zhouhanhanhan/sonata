@@ -32,12 +32,12 @@ class sonata(object):
     Generate self-ambiguity mappings:
     sonata_mappings = sn_instance.mapping_mat(data, ambiguous_groups)
 
-    Generate alternaltive solutions for manifold aligners (SCOT as an example)
+    Generate alternative solutions for manifold aligners (SCOT as an example)
     # manifold aligner
     scot_instance = sonata.scotv1.SCOT(data1, data2)
     scot_instance.align(k=10, e=1e-3)
-    # generate alternaltive mappings
-    manifold_alternaltive_mappings = sn_instance.smap2amap(sonata_mappings, scot_instance.coupling)
+    # generate alternative mappings
+    manifold_alternative_mappings = sn_instance.smap2amap(sonata_mappings, scot_instance.coupling)
 
     Required parameters
     - kmin: Number of neighbors to be used when constructing kNN graphs. Default=10. The number of neighbors k should be suffciently large to connect the corresponding k-NN graph   
@@ -149,12 +149,12 @@ class sonata(object):
         Yields
         ------
         typing.Generator[np.ndarray, None, None]
-            The generator of the self-alternaltive np.ndarray mapping matrices.
+            The generator of the self-alternative np.ndarray mapping matrices.
 
         Notes
         -----
         This function generates self-ambiguity cell by cell mappings by aligning ambiguous cells using optimal transport.
-        It returns a generator generating the matrices of self-alternaltive mappings.
+        It returns a generator generating the matrices of self-alternative mappings.
 
         """
         print('===> generating self-alternative mappings ...')
@@ -732,12 +732,12 @@ class sonata(object):
         aligner_mapping: np.ndarray
         ) -> typing.Generator[np.ndarray, None, None]:
         """
-        Converts alternaltive mappings given a manifold aligner mapping based on SONATA self-ambiguity mapping matrics.
+        Generates alternative mapping matrices for a manifold aligner based on SONATA self-ambiguity mapping matrics.
 
         Parameters
         ----------
         sonata_mappings : typing.Generator[np.ndarray, None, None]
-            A generator yielding self-alternaltive mappings obtained from SONATA algorithm.
+            A generator yielding self-alternative mappings obtained from SONATA algorithm.
         aligner_mapping : np.ndarray
             The mapping matrix obtained from a manifold aligner algorithm.
 
