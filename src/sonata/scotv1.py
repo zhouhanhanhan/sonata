@@ -153,24 +153,24 @@ class SCOT(object):
 			self.y_aligned=np.matmul(np.transpose(self.coupling), self.X) / weights[:, None]
 		return self.X_aligned, self.y_aligned
 
-	def align(self, k: int, e: float, mode: str = "connectivity", metric: str = "correlation", verbose: bool = True, normalize: bool = False, norm: str = "l2", XontoY: bool = True, selfTune: bool=False, init_marginals: bool = True) -> Tuple[np.ndarray, np.ndarray]:
+	def align(self, k: int, e: float, metric: str, mode: str = "connectivity", verbose: bool = True, normalize: bool = False, norm: str = "l2", XontoY: bool = True, selfTune: bool=False, init_marginals: bool = True) -> Tuple[np.ndarray, np.ndarray]:
 		"""
         Aligns the two domains based on the SCOT algorithm.
 
         Parameters
         ----------
-        k : int, optional
+        k : int
             Number of neighbors for kNN graphs. Default is min(min(n_1, n_2), 50).
-        e : float, optional
+        e : float
             Regularization constant for entropic regularization. Default is 1e-3.
+        metric : str
+            Metric for constructing nearest neighbor graphs. 'euclidean' or 'correlation'.
         normalize : bool, optional
             Whether to normalize input data ahead of alignment. Default is True.
         norm : str, optional
             Type of normalization ('l2', 'l1', 'max', 'zscore'). Default is 'l2'.
         mode : str, optional
             Type of graph ('connectivity' or 'distance'). Default is 'connectivity'.
-        metric : str, optional
-            Metric for constructing nearest neighbor graphs. Default is 'correlation'.
         verbose : bool, optional
             Whether to print optimization progress. Default is True.
         XontoY : bool, optional
