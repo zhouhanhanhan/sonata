@@ -10,8 +10,8 @@ from . import util
 
 def plt_domain_by_labels(data_mat: np.ndarray, label: np.ndarray, color: str = '#009ACD', title: str = None, y_tick_labels: list = None, save_url: str = '', a: float = 0.8, show: bool = True) -> None:
     """
-    Visualize scatter plot of data points colored by labels in two-dimensional space. 
-    Subplot1 : unlabeled data scatter   subplot2 : data scatter colored by labels.
+    Scatter plot of a single data domain with labels.
+    Subplot1 : unlabeled data scatters   subplot2 : data scatters colored by labels.
 
     Parameters
     ----------
@@ -84,14 +84,14 @@ def plt_domain_by_labels(data_mat: np.ndarray, label: np.ndarray, color: str = '
     if title:
         plt.suptitle(title, fontdict={'size': 15})
     plt.subplots_adjust(wspace=0.5)
-    plt.show()
-    # if show:
-    #     plt.show()
-    # else:
-    #     assert (save_url is not None), "Please specify save_url!"
-    #     os.makedirs(os.path.dirname(save_url), exist_ok=True)
-    #     plt.savefig(save_url, bbox_inches="tight")
-    # plt.close()
+    
+    if show:
+        plt.show()
+    else:
+        assert (save_url is not None), "Please specify save_url!"
+        os.makedirs(os.path.dirname(save_url), exist_ok=True)
+        plt.savefig(save_url, bbox_inches="tight")
+        plt.close()
 
 def plt_mapping_by_labels(
     X_new: np.ndarray,
@@ -111,18 +111,18 @@ def plt_mapping_by_labels(
     show: bool = True,
 ) -> None:
     """
-    Scatter plot of data points from two domains aligned with labels.
+    Scatter plot of aligned data from two domains with labels.
 
     Parameters
     ----------
     X_new : np.ndarray
-        Data points from the first domain.
+        Data from the first domain.
     y_new : np.ndarray
-        Data points from the second domain.
+        Data from the second domain.
     label1 : np.ndarray
-        Labels for data points in the first domain.
+        Labels for data in the first domain.
     label2 : np.ndarray
-        Labels for data points in the second domain.
+        Labels for data in the second domain.
     title1 : str, optional
         Title for the first domain, by default 'Domain 1'.
     title2 : str, optional
@@ -218,14 +218,13 @@ def plt_mapping_by_labels(
 
     plt.suptitle('Aligned Domains', fontdict={'size': 15}) 
     plt.subplots_adjust(wspace=0.5)
-    plt.show()
-    # if show:
-    #     plt.show()
-    # else:
-    #     assert (save_url is not None), "Please specify save_url!"
-    #     os.makedirs(os.path.dirname(save_url), exist_ok=True)
-    #     plt.savefig(save_url, bbox_inches="tight")
-    # plt.close()
+    if show:
+        plt.show()
+    else:
+        assert (save_url is not None), "Please specify save_url!"
+        os.makedirs(os.path.dirname(save_url), exist_ok=True)
+        plt.savefig(save_url, bbox_inches="tight")
+        plt.close()
 
 def plt_cannotlink_by_labels(
     data_mat: np.ndarray, 
@@ -239,7 +238,7 @@ def plt_cannotlink_by_labels(
     show=True
 ) -> None:
     """
-    Scatter plot of data points with all cell-cell ambiguities. This function helps to visualize all cell ambiguities.
+    Scatter plot of data with all cell-cell ambiguities. This function helps to visualize all cell ambiguities.
 
     Parameters
     ----------
@@ -328,15 +327,14 @@ def plt_cannotlink_by_labels(
     else:
         cbar = plt.colorbar(scatter, cax=cbaxes, orientation='vertical')
         cbar.set_ticks(ticks=(np.arange(0,len(uniq_label))+1), labels=uniq_label) 
-    plt.show()
  
-    # if show:
-    #     plt.show() 
-    # else:
-    #     assert (save_url is not None), "Please specify save_url!"
-    #     os.makedirs(os.path.dirname(save_url), exist_ok=True)
-    #     plt.savefig(save_url, bbox_inches="tight")
-    # plt.close()
+    if show:
+        plt.show() 
+    else:
+        assert (save_url is not None), "Please specify save_url!"
+        os.makedirs(os.path.dirname(save_url), exist_ok=True)
+        plt.savefig(save_url, bbox_inches="tight")
+        plt.close()
 
 
 def plt_ambiguous_groups(
@@ -396,15 +394,12 @@ def plt_ambiguous_groups(
     plt.tick_params(axis='x', labelsize=8)
     plt.tick_params(axis='y', labelsize=8)
     plt.title("Ambiguous groups", fontdict={'fontsize': 10})
-    # plt.show()
-    print("Here!!!!! show=".format(show))
     if show:
-        print("Here!!!!! show!!!")
         plt.show()
     else:
         os.makedirs(os.path.dirname(save_url), exist_ok=True)
         plt.savefig(save_url, bbox_inches="tight")
-    plt.close()
+        plt.close()
 
 def plt_k_elbow(x_step: float, yerror: list, best_k: int, save_url: str = '', show: bool = False) -> None:
     """
@@ -449,13 +444,13 @@ def plt_k_elbow(x_step: float, yerror: list, best_k: int, save_url: str = '', sh
     plt.title('Elbow Method', fontdict={'fontsize': 15})
     plt.xlabel('k / Number of clusters', fontsize=10)
     plt.ylabel('# of uncertain pairs / all possible pairs', fontsize=10)
-    plt.show()
-    # if show:
-    #     plt.show()
-    # else:
-    #     os.makedirs(os.path.dirname(save_url), exist_ok=True)
-    #     plt.savefig(save_url, bbox_inches="tight") 
-    # plt.close()
+
+    if show:
+        plt.show()
+    else:
+        os.makedirs(os.path.dirname(save_url), exist_ok=True)
+        plt.savefig(save_url, bbox_inches="tight") 
+        plt.close()
 
 
 def plt_alternaltive_mappings_by_label(

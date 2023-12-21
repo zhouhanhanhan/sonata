@@ -2,14 +2,13 @@ sonata.util.load_data
 sonata.util.wrapped_normalize
 sonata.util.wrapped_pca
 sonata.util.projection_barycentric
+sonata.util.help
 sonata.model.sonata
 sonata.model.sonata.check_ambiguity
 sonata.model.sonata.mapping_mat
 sonata.model.sonata.smap2amap
 sonata.scotv1.SCOT
 sonata.scotv1.SCOT.align
-sonata.util.projection_barycentric
-sonata.util.load_data
 sonata.vis.plt_domain_by_labels
 sonata.vis.plt_cannotlink_by_labels
 sonata.vis.plt_ambiguous_groups
