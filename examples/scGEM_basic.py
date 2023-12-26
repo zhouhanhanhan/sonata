@@ -22,19 +22,19 @@ if __name__=='__main__':
     data1 = sonata.util.load_data(data_url1) 
     data1 = sonata.util.wrapped_normalize(data1)
 
-    ## sonata pipline
+    ## sonata pipeline
     sn_instance = sonata.model.sonata(sigma=sigma)
     ambiguous_groups = sn_instance.check_ambiguity(data1)
     sonata_mapping_result = sn_instance.mapping_mat(data1, ambiguous_groups)
 
-    # manifold aligner (SCOT pipline)
+    # manifold aligner (SCOT pipeline)
     k = 25
     e = 0.005
 
     data2 = sonata.util.load_data(data_url2)
     data2 = sonata.util.wrapped_normalize(data2)
     scot_instance = sonata.scotv1.SCOT(data1, data2)
-    scot_instance.align(k=k, e=e, normalize=False)
+    scot_instance.align(k=k, e=e, metric="correlation", normalize=False)
     scot_instance.coupling
 
     # generate alternaltive mappings

@@ -109,7 +109,7 @@ class sonata(object):
 
     def check_ambiguity(self, data:np.ndarray) -> dict:
         """
-        Pipline to check whether ambiguity exists in input data.
+        Pipeline to check whether ambiguity exists in input data.
 
         Parameters
         ----------
