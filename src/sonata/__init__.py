@@ -7,5 +7,5 @@ except DistributionNotFound:
 
 from . import scotv1
 from . import model
-from . import util, vis
+from . import util, vis, eval
 
