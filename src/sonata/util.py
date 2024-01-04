@@ -118,6 +118,8 @@ def load_data(matrix_file: str) -> np.ndarray:
         data = np.loadtxt(matrix_file, delimiter=',')
     elif file_type == 'npz':
         data = sp.load_npz(matrix_file)
+    elif file_type == 'edgelist':
+        data = np.loadtxt(matrix_file, delimiter=' ')
     else:
         data = np.load(matrix_file) 
     return data
@@ -162,3 +164,26 @@ def projection_barycentric(x: np.ndarray, y: np.ndarray, coupling: np.ndarray, X
         y_aligned=np.matmul(np.transpose(coupling), x) / weights[:, None]
 
     return X_aligned, y_aligned
+
+
+def load_embed(path):
+    if path.split(".")[-1] == 'emb':
+        order=[]
+        embed = []
+        with open(path, 'r') as f:
+            lines = f.readlines()
+            for line in lines[1:]:
+                line = line.strip().split()
+                order.append(line[0])
+                embed.append([line[1], line[2]])
+        embed = np.array(embed).astype(float)
+        order = np.array(order).astype(int)
+        embed = embed[np.argsort(order)]
+    else:
+        embed = np.load(path)
+    return embed 
+
+def read_network(filename, undirected=True):
+    if not undirected:
+        return nx.read_edgelist(filename, nodetype=int, create_using=nx.DiGraph())
+    return nx.read_edgelist(filename, nodetype=int)
