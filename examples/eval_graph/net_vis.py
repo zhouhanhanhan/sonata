@@ -79,7 +79,7 @@ def vis_graph_node(filename, pos="", save_path=""):
   
 
 if __name__== "__main__":
-    dataset = "karate"
+    dataset = "barbell"
     url = f"../data/graphs/{dataset}"
     save_path = f"../result/graphs/{dataset}"
 
@@ -99,15 +99,16 @@ if __name__== "__main__":
     data = csr_matrix((np.ones(edges.shape[0]), (edges[:,0], edges[:,1])), shape=(n_nodes, n_nodes))
     dist = sp.csgraph.floyd_warshall(data, directed=False)
     geo_mat = (dist - np.min(dist)) / (np.max(dist) - np.min(dist))
-    vis(np.sort(geo_mat, axis=1), label=label, show=False, path=os.path.join(save_path, "sonata_geo_sorted.png"))
+    # vis(np.sort(geo_mat, axis=1), label=label, show=False, path=os.path.join(save_path, "sonata_geo_sorted.png"))
     
     # l1 distance
     sn_instance = sonata.model.sonata(0.1)
     l1_mat = sn_instance.geo_similarity(geo_mat)
-    vis(l1_mat, label=label, show=False, path=os.path.join(save_path, "sonata_l1.png"))
+    # vis(l1_mat, label=label, show=False, path=os.path.join(save_path, "sonata_l1.png"))
 
     # cell-wise ambiguity
     cell_amat = sn_instance.cell_ambiguity(geo_mat)
+    print(np.max(cell_amat[0]), np.min(cell_amat[0]))
     print(cell_amat)
     vis(cell_amat, label=label, show=False, path=os.path.join(save_path, "sonata_cell_ambiguity.png"))
     
@@ -117,14 +118,14 @@ if __name__== "__main__":
     # vis(dist_amat, show=False, path="../result/graphs/barbell/sonata_cell_ambiguity_pcoa.png")
 
     # load baselines
-    baselines = ["struc2vec.emb", "drne.npy", "drne_16.npy", "netmf.npy"] # "node2vec.emb", "barbell_s2v.emb", "drne_16.npy"
+    baselines = ["struc2vec.emb", "drne.npy", "netmf.npy"] #  "barbell_s2v.emb", "drne_16.npy", "drne_16.npy", "node2vec.emb"
     for baseline in baselines:
         basename = baseline.split(".")[0]
-        embed = sonata.uitl.load_embed(os.path.join(save_path, "baselines", baseline))
+        embed = sonata.util.load_embed(os.path.join(save_path, "baselines", baseline))
         if basename == "netmf" and dataset == "karate":
             embed = embed[1:,:]
         print(baseline, "embed shape=", embed.shape)
-        print(embed)
+        # print(embed)
 
         if basename in ["drne_16", "barbell_s2v"]:
             vis(embed, label=label, show=False, path=os.path.join(save_path, f"{basename}.png"))
@@ -138,7 +139,7 @@ if __name__== "__main__":
     # visualize a node of barbell
     # vis_graph_node(f"{url}.edgelist", save_path=os.path.join(save_path, "graph",  "pos0.png"))
     vis_graph_structure(f"{url}.edgelist", l1_mat[0], os.path.join(save_path, "graph", "l1_node0.png"))
-    vis_graph_structure(f"{url}.edgelist", cell_amat[0], os.path.join(save_path, "graph",  "ambiguity_node0.png"))
+    vis_graph_structure(f"{url}.edgelist", 1-cell_amat[0], os.path.join(save_path, "graph",  "ambiguity_node0.png"))
 
 
 
